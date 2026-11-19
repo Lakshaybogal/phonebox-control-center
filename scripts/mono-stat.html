@@ -1,0 +1,27 @@
+<style>
+/*THEME*/:root{--fg:#FFFFFF;--dim:#2A2A2A;--muted:#8A8A8A;--font:ui-monospace,"Roboto Mono",Menlo,monospace}/*END*/
+html,body{background:transparent}
+body{box-sizing:border-box;height:100%;padding:2px 2px;display:flex;flex-direction:column;justify-content:space-between;font-family:var(--font);color:var(--fg)}
+.lbl{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.16em}
+.val{font-size:clamp(24px,42vh,48px);font-weight:500;letter-spacing:-.02em;line-height:1}
+.val small{font-size:.45em;color:var(--muted);margin-left:.15em;letter-spacing:0}
+.sub{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+</style>
+<div class="lbl" id="lbl"></div><div class="val"><span id="v">&ndash;</span><small id="u"></small></div><div class="sub" id="sub"></div>
+<script>
+var METRIC = "__METRIC__"; // cpu | ram | net
+function rate(b){ if(b>=1e6) return [(b/1e6).toFixed(1),"MB/s"]; return [Math.round(b/1e3),"KB/s"]; }
+function draw(s){
+  var pc = s && s.pc; if(!pc) return;
+  var v, u, sub, pct;
+  if (METRIC === "cpu") { v = Math.round(pc.cpu); u = "%"; sub = pc.cpuName || ""; pct = pc.cpu; }
+  else if (METRIC === "ram") { v = pc.ramUsedGb.toFixed(1); u = "GB"; pct = pc.ramUsedGb / pc.ramTotalGb * 100;
+    sub = Math.round(pct) + "% of " + Math.round(pc.ramTotalGb) + " GB"; }
+  else { var d = rate(pc.netDownBps || 0), up = rate(pc.netUpBps || 0); v = d[0]; u = d[1];
+    sub = "↑ " + up[0] + " " + up[1]; pct = Math.min(100, (pc.netDownBps || 0) / 2e4); }
+  document.getElementById("lbl").textContent = {cpu:"CPU", ram:"Memory", net:"Network"}[METRIC];
+  document.getElementById("v").textContent = v; document.getElementById("u").textContent = u;
+  document.getElementById("sub").textContent = sub;
+}
+phonebox.on("state", draw);
+</script>

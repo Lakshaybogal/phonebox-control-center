@@ -1,0 +1,51 @@
+<style>
+/*THEME*/:root{--fg:#FFFFFF;--dim:#2A2A2A;--muted:#8A8A8A;--font:ui-monospace,"Roboto Mono",Menlo,monospace}/*END*/
+html,body{background:transparent}
+body{box-sizing:border-box;height:100%;padding:4.5vh 5vw;display:flex;flex-direction:column;gap:3.5vh;font-family:var(--font);color:var(--fg);letter-spacing:.04em}
+.head{display:flex;align-items:center;gap:2.4vw;font-size:clamp(10px,4.2vh,15px);text-transform:uppercase}
+.head b{font-weight:700;letter-spacing:.18em}
+.chip{border:1px solid var(--muted);color:var(--muted);border-radius:99px;padding:.15em .7em;font-size:.8em}
+.upd{margin-left:auto;color:var(--muted);font-size:.8em}
+.rows{flex:1;display:flex;flex-direction:column;justify-content:space-around;gap:3vh;min-height:0}
+.row{display:flex;flex-direction:column;gap:1.6vh;min-height:0}
+.top{display:flex;align-items:flex-end;justify-content:space-between;gap:3vw}
+.lbl{font-size:clamp(9px,3.6vh,13px);color:var(--muted);text-transform:uppercase;letter-spacing:.16em}
+.reset{font-size:clamp(9px,3.4vh,12px);color:var(--muted);text-align:right;text-transform:uppercase;letter-spacing:.1em}
+.num{height:clamp(26px,15vh,70px);display:block}
+.num circle{fill:var(--fg)}
+.bar{display:flex;gap:1.2%;align-items:center}
+.bar i{flex:1;aspect-ratio:1;max-height:2.6vh;border-radius:50%;background:var(--dim)}
+.bar i.on{background:var(--fg)}
+.bar i.edge{animation:pulse 1.6s ease-in-out infinite}
+.hot .lbl::after{content:"  \25CF HIGH";color:var(--fg)}
+@keyframes pulse{50%{opacity:.25}}
+.msg{flex:1;display:grid;place-items:center;color:var(--muted);text-transform:uppercase;font-size:clamp(10px,4vh,14px);letter-spacing:.2em}
+</style>
+<div class="head"><b>Claude</b><span class="chip" id="plan">—</span><span class="upd" id="upd"></span></div>
+<div class="rows" id="rows"><div class="msg">Waiting for data</div></div>
+<script>
+// 5x7 dot-matrix glyphs, one string per row ("1" = dot)
+var G={"0":["01110","10001","10011","10101","11001","10001","01110"],"1":["00100","01100","00100","00100","00100","00100","01110"],
+"2":["01110","10001","00001","00010","00100","01000","11111"],"3":["11110","00001","00001","01110","00001","00001","11110"],
+"4":["00010","00110","01010","10010","11111","00010","00010"],"5":["11111","10000","11110","00001","00001","10001","01110"],
+"6":["00110","01000","10000","11110","10001","10001","01110"],"7":["11111","00001","00010","00100","01000","01000","01000"],
+"8":["01110","10001","10001","01110","10001","10001","01110"],"9":["01110","10001","10001","01111","00001","00010","01100"],
+"%":["11001","11010","00010","00100","01000","01011","10011"]};
+function dots(text){var x=0,c=[];for(var k=0;k<text.length;k++){var g=G[text[k]];if(!g)continue;
+for(var r=0;r<7;r++)for(var q=0;q<5;q++)if(g[r][q]==="1")c.push('<circle cx="'+(x+q+.5)+'" cy="'+(r+.5)+'" r=".42"/>');x+=6}
+return '<svg class="num" viewBox="0 0 '+Math.max(1,x-1)+' 7" preserveAspectRatio="xMinYMid meet">'+c.join("")+'</svg>'}
+function left(ms){if(!ms||ms<0)return"";var m=Math.round(ms/60000),d=Math.floor(m/1440),h=Math.floor(m%1440/60),mm=m%60;
+return "resets in "+(d?d+"d ":"")+(d||h?h+"h ":"")+(d?"":mm+"m")}
+function bar(p){var n=24,on=Math.round(p/100*n),s="";for(var i=0;i<n;i++)s+='<i class="'+(i<on?"on":"")+(i===on-1&&p<100?" edge":"")+'"></i>';return'<div class="bar">'+s+'</div>'}
+var last=null;
+function draw(q){last=q;var list=(q&&q.providers)||q||[];var c=null;for(var i=0;i<list.length;i++)if(list[i].id==="claude")c=list[i];
+var rows=document.getElementById("rows");
+if(!c){rows.innerHTML='<div class="msg">No Claude data</div>';return}
+document.getElementById("plan").textContent=c.plan||"—";
+document.getElementById("upd").textContent=c.updatedAt?new Date(c.updatedAt).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}):"";
+if(c.error&&!(c.limits||[]).length){rows.innerHTML='<div class="msg">'+c.error+'</div>';return}
+rows.innerHTML=(c.limits||[]).slice(0,2).map(function(l){var p=Math.max(0,Math.min(100,Math.round(l.percent||0)));
+return '<div class="row'+(p>=80?" hot":"")+'"><div class="top"><div><div class="lbl">'+(l.label||"")+'</div>'+dots(p+"%")+'</div><div class="reset">'+left((l.resetsAt||0)-Date.now())+'</div></div>'+bar(p)+'</div>'}).join("")}
+phonebox.on("quotas",draw);
+setInterval(function(){if(last)draw(last)},30000);
+</script>
